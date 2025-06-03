@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "AmazingAcqAgent",
+    "slug": "amazingacqagent",
+    "version": "1.0.3",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to show your position on the map and track your routes.",
+        "NSLocationAlwaysUsageDescription": "This app needs access to your location at all times to track your position even when the app is in the background.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to your location at all times to track your position even when the app is in the background.",
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ],
+      "package": "com.amazingacqagent.app",
+      "versionCode": 3,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCL-j2dYRFY-vDvviqYAPOLSmx0spzRnGI"
+        }
+      }
+    },
+    "web": {
+      "favicon": "assets/favicon.png"
+    },
+    "extra": {
+      "ZOHO_API_DOMAIN": "https://www.zohoapis.com",
+      "ZOHO_REFRESH_TOKEN": "1000.cc97ff115de7f246b3327842488f4e68.7dbf817d5bd98ecadb06b89b829f26fe",
+      "ZOHO_CLIENT_ID": "1000.QFEPTNDJJ4BMP3ROA59BC5KI6NPJOD",
+      "ZOHO_CLIENT_SECRET": "4f2e723b5e87d120aff3ef75ac8d21c84ad299ad4a",
+      "GOOGLE_MAPS_API_KEY": "AIzaSyCL-j2dYRFY-vDvviqYAPOLSmx0spzRnGI",
+      "eas": {
+        "projectId": "f3690765-30bf-4f32-bd79-a6844f230071"
+      }
+    },
+    "plugins": ["expo-dev-client"],
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f3690765-30bf-4f32-bd79-a6844f230071"
+    }
+  }
+}

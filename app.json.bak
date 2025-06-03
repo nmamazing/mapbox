@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "AmazingAcqAgent",
+    "slug": "amazingacqagent",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "ZOHO_API_DOMAIN": "https://www.zohoapis.com",
+      "ZOHO_REFRESH_TOKEN": "1000.cc97ff115de7f246b3327842488f4e68.7dbf817d5bd98ecadb06b89b829f26fe",
+      "ZOHO_CLIENT_ID": "1000.QFEPTNDJJ4BMP3ROA59BC5KI6NPJOD",
+      "ZOHO_CLIENT_SECRET": "4f2e723b5e87d120aff3ef75ac8d21c84ad299ad4a"
+    }
+  }
+}

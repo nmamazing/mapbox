@@ -1,0 +1,10 @@
+{
+  "hostType": "lan",
+  "lanType": "ip",
+  "dev": true,
+  "minify": false,
+  "urlRandomness": "Md-EK78",
+  "https": false,
+  "scheme": "exp+amazingacqagent",
+  "devClient": false
+}
