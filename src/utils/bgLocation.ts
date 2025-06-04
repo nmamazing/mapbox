@@ -1,113 +1,80 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import { getRealm } from '../config/realm';
-import { syncWithMongoDB } from '../services/mongodb';
+import { locationService } from '../services/locationService';
 
-const BACKEND_URL = 'http://<YOUR_BACKEND_IP>:4000/add-location'; // Replace with your backend IP or domain
+const LOCATION_TASK_NAME = 'background-location-task';
 
-async function sendLocationToBackend({
-  user,
-  latitude,
-  longitude,
-  accuracy,
-  timestamp,
-  message,
-}: {
-  user?: string;
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-  timestamp: string;
-  message?: string;
-}) {
-  try {
-    const response = await fetch(BACKEND_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user,
-        latitude,
-        longitude,
-        accuracy,
-        timestamp,
-        message,
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Failed to send location');
-    return data;
-  } catch (err) {
-    console.error('Error sending location to backend:', err);
-    throw err;
-  }
+interface LocationTaskData {
+  locations: Location.LocationObject[];
 }
 
-TaskManager.defineTask('location-tracking', async ({ data, error }) => {
+// Define the task
+TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
     console.error('Background location task error:', error);
     return;
   }
-  if (data) {
-    const { locations } = data as { locations: Location.LocationObject[] };
-    if (locations && locations.length > 0) {
-      await saveUserLocation(locations[0]);
+
+  const locationData = data as LocationTaskData;
+  if (locationData?.locations) {
+    for (const location of locationData.locations) {
+      try {
+        await locationService.createLocation({
+          user: 'currentUser', // You might want to get this from your auth context
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          accuracy: location.coords.accuracy || 0, // Provide default value if null
+          timestamp: new Date().toISOString(),
+          message: 'Background location update'
+        });
+      } catch (error) {
+        console.error('Error sending location to backend:', error);
+      }
     }
   }
 });
 
-async function saveUserLocation(location: Location.LocationObject) {
+// Start background location updates
+export const startBackgroundLocationUpdates = async () => {
   try {
-    // Send to backend
-    await sendLocationToBackend({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      accuracy: location.coords.accuracy,
-      timestamp: new Date().toISOString(),
-      message: 'Tracked location',
-    });
-    console.log('Location sent to backend successfully');
-  } catch (error) {
-    console.error('Error saving location:', error);
-  }
-}
-
-export async function startLocationTracking() {
-  try {
-    const { status } = await Location.requestBackgroundPermissionsAsync();
-    if (status !== 'granted') {
-      console.error('Background location permission not granted');
-      return;
+    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+    if (foregroundStatus !== 'granted') {
+      throw new Error('Foreground location permission not granted');
     }
 
-    await Location.startLocationUpdatesAsync('location-tracking', {
+    const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+    if (backgroundStatus !== 'granted') {
+      throw new Error('Background location permission not granted');
+    }
+
+    await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       accuracy: Location.Accuracy.Balanced,
-      timeInterval: 5000,
-      distanceInterval: 10,
+      timeInterval: 5000, // 5 seconds
+      distanceInterval: 10, // 10 meters
       foregroundService: {
         notificationTitle: 'Location Tracking',
         notificationBody: 'Tracking your location in the background',
+        notificationColor: '#4CAF50',
       },
     });
 
-    Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.Balanced,
-        timeInterval: 5000,
-        distanceInterval: 10,
-      },
-      (location) => {
-        saveUserLocation(location);
-      }
-    );
+    console.log('Background location updates started');
   } catch (error) {
-    console.error('Error starting location tracking:', error);
+    console.error('Error starting background location updates:', error);
+    throw error;
   }
-}
+};
 
-export async function stopLocationTracking() {
+// Stop background location updates
+export const stopBackgroundLocationUpdates = async () => {
   try {
-    await Location.stopLocationUpdatesAsync('location-tracking');
+    const isTracking = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+    if (isTracking) {
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+      console.log('Background location updates stopped');
+    }
   } catch (error) {
-    console.error('Error stopping location tracking:', error);
+    console.error('Error stopping background location updates:', error);
+    throw error;
   }
-} 
+}; 

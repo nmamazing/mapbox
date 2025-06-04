@@ -36,7 +36,8 @@
     "react-native-screens": "^4.11.1",
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "^0.20.0",
-    "realm": "^20.1.0"
+    "realm": "^20.1.0",
+    "expo-task-manager": "~13.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

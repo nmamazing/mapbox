@@ -40,6 +40,7 @@
       "ZOHO_CLIENT_ID": "1000.QFEPTNDJJ4BMP3ROA59BC5KI6NPJOD",
       "ZOHO_CLIENT_SECRET": "4f2e723b5e87d120aff3ef75ac8d21c84ad299ad4a",
       "GOOGLE_MAPS_API_KEY": "AIzaSyCL-j2dYRFY-vDvviqYAPOLSmx0spzRnGI",
+      "API_BASE_URL": "https://aaabe.amazingoffer.com/api/agent/v1",
       "eas": {
         "projectId": "f3690765-30bf-4f32-bd79-a6844f230071"
       }

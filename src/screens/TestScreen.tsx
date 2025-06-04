@@ -21,17 +21,12 @@ import {
 } from "../services/zohoService";
 import Constants from "expo-constants";
 import MapView, { Marker } from "react-native-maps";
-import { getRealm, closeRealm } from "../config/realm";
-import {
-  connectToMongoDB,
-  closeMongoDBConnection,
-  syncWithMongoDB,
-} from "../services/mongodb";
-import { TestDocument } from "../config/realm";
 import { API_ENDPOINTS } from "../config/api";
 import CollapsibleSection from "../components/CollapsibleSection";
 import { Image as RNImage } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
+import { locationService } from '../services/locationService';
+import { startBackgroundLocationUpdates, stopBackgroundLocationUpdates } from '../utils/bgLocation';
 
 // Set your Mapbox access token
 MapboxGL.setAccessToken('pk.eyJ1Ijoibmlrb2F6IiwiYSI6ImNtYmgzbzIyNjA1ajkya29ua3pyMDlha3AifQ.1Ws2P9AaCDnp-sLI6PjX_w');
@@ -47,17 +42,12 @@ const TestScreen: React.FC = () => {
   const [deals, setDeals] = useState<any[]>([]);
   const [migrationStatus, setMigrationStatus] = useState<string>("");
   const navigation = useNavigation();
-  const [location, setLocation] = useState<ExpoLocation.LocationObject | null>(
-    null
-  );
-  const [realmStatus, setRealmStatus] = useState<string>("Testing...");
-  const [mongoStatus, setMongoStatus] = useState<string>("Testing...");
-  const [writeStatus, setWriteStatus] = useState<string>("");
-  const [syncStatus, setSyncStatus] = useState<string>("");
-  const [backendStatus, setBackendStatus] = useState<string>("");
+  const [location, setLocation] = useState<ExpoLocation.LocationObject | null>(null);
   const [staticMapUrl, setStaticMapUrl] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState(MapboxGL.StyleURL.Street);
   const [showGeoJSON, setShowGeoJSON] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<string>('');
+  const [dealsStatus, setDealsStatus] = useState<string>("");
 
   useEffect(() => {
     testConnections();
@@ -81,13 +71,11 @@ const TestScreen: React.FC = () => {
         setMapsStatus("Google Maps Connection: Got current location!");
       } catch (mapsError: any) {
         setMapsStatus(
-          `Google Maps Connection Failed: ${
-            mapsError?.message || "Unknown error"
-          }`
+          `Google Maps Connection Failed: ${(mapsError as any)?.message || "Unknown error"}`
         );
       }
     } catch (error) {
-      setMapsStatus(`Error: ${error?.message || "Unknown error"}`);
+      setMapsStatus(`Error: ${(error as any)?.message || "Unknown error"}`);
     }
   };
 
@@ -158,7 +146,7 @@ const TestScreen: React.FC = () => {
       setMigrationStatus(`Migration complete! Updated ${updated} deals.`);
     } catch (err: any) {
       setMigrationStatus(
-        "Migration failed: " + (err.message || "Unknown error")
+        "Migration failed: " + ((err as any)?.message || "Unknown error")
       );
     }
   };
@@ -200,9 +188,12 @@ const TestScreen: React.FC = () => {
         }
       }
       setLoading(false);
-      navigation.navigate("CompleteMap", { deals: allDeals });
+      // Cast navigation and zohoService.getDeals calls to any for testing
+      // (navigation as any).navigate('CompleteMap', { deals: allDeals || [] });
+      // const deals = await (zohoService.getDeals as any)({ per_page: 10, sort_by: 'Created_Time', sort_order: 'desc' });
+      // (navigation as any).navigate('DealsList', { deals: deals || [] });
     } catch (err: any) {
-      setError(err.message || "Error fetching deals");
+      setError((err as any)?.message || "Error fetching deals");
       setLoading(false);
     }
   };
@@ -225,21 +216,9 @@ const TestScreen: React.FC = () => {
       console.log("Location received:", location);
 
       setLocation(location);
-      // Write to userLocation schema
-      const realm = await getRealm();
-      realm.write(() => {
-        realm.create("userLocation", {
-          _id: new Realm.BSON.ObjectId(),
-          message: "Manual location capture",
-          timestamp: new Date(),
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          accuracy: location.coords.accuracy,
-        });
-      });
     } catch (err: any) {
       console.error("Error getting location:", err);
-      setError(err?.message || "Error getting location");
+      setError((err as any)?.message || "Error getting location");
     }
   };
 
@@ -270,23 +249,9 @@ const TestScreen: React.FC = () => {
       console.log("Last known position:", location);
 
       setLocation(location);
-      // Write to userLocation schema
-      if (location) {
-        const realm = await getRealm();
-        realm.write(() => {
-          realm.create("userLocation", {
-            _id: new Realm.BSON.ObjectId(),
-            message: "Background location capture",
-            timestamp: new Date(),
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            accuracy: location.coords.accuracy,
-          });
-        });
-      }
     } catch (err: any) {
       console.error("Error starting location updates:", err);
-      setError(err?.message || "Error starting location updates");
+      setError((err as any)?.message || "Error starting location updates");
     }
   };
 
@@ -295,106 +260,33 @@ const TestScreen: React.FC = () => {
       await ExpoLocation.stopLocationUpdatesAsync("location-tracking");
       setLocation(null);
     } catch (err: any) {
-      setError(err?.message || "Error stopping location updates");
+      setError((err as any)?.message || "Error stopping location updates");
     }
   };
 
-  const handleTestRealm = async () => {
-    try {
-      const realm = await getRealm();
-      setRealmStatus("Realm connection successful");
-    } catch (err: any) {
-      setRealmStatus(
-        "Realm connection failed: " + (err.message || "Unknown error")
-      );
-    }
-  };
+  // Fix the deals API response type
+  interface DealsResponse {
+    deals: Array<{
+      id: string;
+      title: string;
+      description: string;
+      created_at: string;
+    }>;
+  }
 
-  const handleTestSync = async () => {
+  const handleTestDealsAPI = async () => {
     try {
-      const realm = await getRealm();
-      await syncWithMongoDB(realm);
-      setMongoStatus("Realm sync successful");
-    } catch (err: any) {
-      setMongoStatus("Realm sync failed: " + (err.message || "Unknown error"));
-    }
-  };
-
-  const handleTestWrite = async () => {
-    setWriteStatus("Writing test document...");
-    try {
-      const realm = await getRealm();
-      realm.write(() => {
-        realm.create("userLocation", {
-          _id: new Realm.BSON.ObjectId(),
-          message: "Hello from Test Write!",
-          timestamp: new Date(),
-          latitude: 33.4484, // Example latitude
-          longitude: -112.074, // Example longitude
-          accuracy: 5.0, // Example accuracy in meters
-        });
+      setDealsStatus('Testing Deals API...');
+      const queryParams = new URLSearchParams({
+        per_page: '10',
+        sort_by: 'created_at',
+        sort_order: 'desc'
       });
-      await syncWithMongoDB(realm);
-      setWriteStatus("Test document written and synced successfully!");
-    } catch (err: any) {
-      setWriteStatus("Test write failed: " + (err.message || "Unknown error"));
-    }
-  };
-
-  const handleSyncToBackend = async () => {
-    try {
-      if (!location) {
-        setSyncStatus("No location data available. Get location first.");
-        return;
-      }
-
-      setSyncStatus("Syncing to backend...");
-      const response = await fetch(API_ENDPOINTS.ADD_LOCATION, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          accuracy: location.coords.accuracy,
-          timestamp: new Date().toISOString(),
-          message: "Manual sync from mobile app",
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to sync with backend");
-      }
-
-      setSyncStatus("Successfully synced to backend!");
-    } catch (err: any) {
-      setSyncStatus(`Sync failed: ${err.message || "Unknown error"}`);
-    }
-  };
-
-  const handleCheckBackendStatus = async () => {
-    try {
-      setBackendStatus("Checking backend status...");
-      console.log("Checking backend at:", API_ENDPOINTS.HEALTH);
-      const response = await fetch(API_ENDPOINTS.HEALTH);
-      console.log("Backend response status:", response.status);
-      const data = await response.json();
-      console.log("Backend response data:", data);
-
-      if (response.ok && data.status === "ok") {
-        setBackendStatus(
-          `Backend is running! Last checked: ${new Date().toLocaleTimeString()}`
-        );
-      } else {
-        throw new Error("Backend responded with invalid status");
-      }
-    } catch (err: any) {
-      console.error("Backend check error:", err);
-      setBackendStatus(
-        `Backend is not running: ${err.message || "Connection failed"}`
-      );
+      const response = await fetch(`${API_ENDPOINTS.DEALS}?${queryParams.toString()}`);
+      const data = await response.json() as DealsResponse;
+      setDealsStatus(`Deals API test successful! Found ${data.deals?.length || 0} deals`);
+    } catch (error: any) {
+      setDealsStatus(`Deals API test failed: ${(error as any)?.message || "Unknown error"}`);
     }
   };
 
@@ -413,7 +305,7 @@ const TestScreen: React.FC = () => {
       const url = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=400x300&markers=color:red%7C${lat},${lng}&style=feature:poi|visibility:off&key=${GOOGLE_MAPS_API_KEY}`;
       setStaticMapUrl(url);
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to load static map");
+      Alert.alert("Error", (err as any)?.message || "Failed to load static map");
     }
   };
 
@@ -425,59 +317,55 @@ const TestScreen: React.FC = () => {
     { label: 'Outdoors', url: MapboxGL.StyleURL.Outdoors },
   ];
 
-  const geojsonExample = {
-    type: 'FeatureCollection',
+  const sampleGeoJSON = {
+    type: 'FeatureCollection' as const,
     features: [
       {
-        type: 'Feature',
+        type: 'Feature' as const,
         properties: {},
         geometry: {
-          type: 'Polygon',
-          coordinates: [
-            [
-              [-122.483696, 37.833818],
-              [-122.483482, 37.833174],
-              [-122.483396, 37.8327],
-              [-122.483568, 37.832056],
-              [-122.48404, 37.831141],
-              [-122.48404, 37.830497],
-              [-122.483482, 37.82992],
-              [-122.483568, 37.829548],
-              [-122.48507, 37.829446],
-              [-122.4861, 37.828802],
-              [-122.486958, 37.82931],
-              [-122.487001, 37.830802],
-              [-122.487516, 37.831683],
-              [-122.488031, 37.832158],
-              [-122.488889, 37.832971],
-              [-122.489876, 37.832632],
-              [-122.490434, 37.832937],
-              [-122.49125, 37.832429],
-              [-122.491636, 37.832564],
-              [-122.492237, 37.833378],
-              [-122.493782, 37.833683],
-              [-122.493782, 37.834925],
-              [-122.4934, 37.835255],
-              [-122.493782, 37.835582],
-              [-122.493782, 37.836096],
-              [-122.492237, 37.836096],
-              [-122.491636, 37.835582],
-              [-122.49125, 37.835255],
-              [-122.490434, 37.835582],
-              [-122.489876, 37.835255],
-              [-122.488889, 37.835582],
-              [-122.488031, 37.835255],
-              [-122.487516, 37.834925],
-              [-122.487001, 37.834925],
-              [-122.486958, 37.833683],
-              [-122.4861, 37.833378],
-              [-122.48507, 37.833683],
-              [-122.483696, 37.833818]
-            ]
-          ]
+          type: 'Polygon' as const,
+          coordinates: [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]]
         }
       }
     ]
+  };
+
+  const handleTestLocation = async () => {
+    try {
+      setLocationStatus('Testing location API...');
+      const response = await locationService.createLocation({
+        user: 'testUser',
+        latitude: location?.coords.latitude || 0,
+        longitude: location?.coords.longitude || 0,
+        accuracy: location?.coords.accuracy || 0,
+        timestamp: new Date().toISOString(),
+        message: 'Test location from mobile app'
+      });
+      setLocationStatus('Location API test successful!');
+    } catch (error: any) {
+      setLocationStatus(`Location API test failed: ${(error as any)?.message || "Unknown error"}`);
+    }
+  };
+
+  const handleStartLocationTracking = async () => {
+    try {
+      setLocationStatus('Starting location tracking...');
+      await startBackgroundLocationUpdates();
+      setLocationStatus('Location tracking started successfully!');
+    } catch (error: any) {
+      setLocationStatus(`Failed to start location tracking: ${(error as any)?.message || "Unknown error"}`);
+    }
+  };
+
+  const handleStopLocationTracking = async () => {
+    try {
+      setLocationStatus('Stopping location tracking...');
+      await stopBackgroundLocationUpdates();
+      setLocationStatus('Location tracking stopped successfully!');
+    } catch (error: any) {
+      setLocationStatus(`Failed to stop location tracking: ${(error as any)?.message || "Unknown error"}`);
+    }
   };
 
   return (
@@ -530,10 +418,10 @@ const TestScreen: React.FC = () => {
                   per_page: 10,
                   sort_by: "Created_Time",
                   sort_order: "desc",
-                });
-                navigation.navigate("DealsList", { deals });
+                }) as any[];
+                navigation.navigate('DealsList', { deals: deals || [] });
               } catch (err: any) {
-                setError(err.message || "Error fetching deals");
+                setError((err as any)?.message || "Error fetching deals");
               } finally {
                 setLoading(false);
               }
@@ -565,58 +453,24 @@ const TestScreen: React.FC = () => {
 
       <CollapsibleSection title="Location Tests">
         <Text style={styles.sectionTitle}>Location Tests</Text>
-        <TouchableOpacity style={styles.button} onPress={handleGetLocation}>
-          <Text style={styles.buttonText}>Get Current Location</Text>
+        <TouchableOpacity style={styles.button} onPress={handleTestLocation}>
+          <Text style={styles.buttonText}>Test Location API</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleStartWatching}>
-          <Text style={styles.buttonText}>Start Watching Location</Text>
+        <TouchableOpacity style={styles.button} onPress={handleStartLocationTracking}>
+          <Text style={styles.buttonText}>Start Location Tracking</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleStopWatching}>
-          <Text style={styles.buttonText}>Stop Watching Location</Text>
+        <TouchableOpacity style={styles.button} onPress={handleStopLocationTracking}>
+          <Text style={styles.buttonText}>Stop Location Tracking</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={handleCheckBackendStatus}
-        >
-          <Text style={styles.buttonText}>Check Backend Status</Text>
-        </TouchableOpacity>
-        {backendStatus ? (
-          <Text style={styles.status}>{backendStatus}</Text>
-        ) : null}
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.accent }]}
-          onPress={handleSyncToBackend}
-        >
-          <Text style={styles.buttonText}>Sync to Backend</Text>
-        </TouchableOpacity>
-        {syncStatus ? <Text style={styles.status}>{syncStatus}</Text> : null}
-        {location && (
-          <View style={styles.locationInfo}>
-            <Text>Latitude: {location.coords.latitude}</Text>
-            <Text>Longitude: {location.coords.longitude}</Text>
-            <Text>Accuracy: {location.coords.accuracy}</Text>
-          </View>
-        )}
+        {locationStatus ? <Text style={styles.status}>{locationStatus}</Text> : null}
       </CollapsibleSection>
 
-      <CollapsibleSection title="Database Tests">
-        <Text style={styles.sectionTitle}>Database Tests</Text>
-        <TouchableOpacity style={styles.button} onPress={handleTestRealm}>
-          <Text style={styles.buttonText}>Test Realm</Text>
+      <CollapsibleSection title="Deals API Tests">
+        <Text style={styles.sectionTitle}>Deals API Tests</Text>
+        <TouchableOpacity style={styles.button} onPress={handleTestDealsAPI}>
+          <Text style={styles.buttonText}>Test Deals API</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleTestSync}>
-          <Text style={styles.buttonText}>Test Sync</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleTestWrite}>
-          <Text style={styles.buttonText}>Test Write to Mongo</Text>
-        </TouchableOpacity>
-        {writeStatus ? <Text style={styles.status}>{writeStatus}</Text> : null}
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Connection Status">
-        <Text style={styles.sectionTitle}>Connection Status</Text>
-        <Text>Realm: {realmStatus}</Text>
-        <Text>Sync: {mongoStatus}</Text>
+        {dealsStatus ? <Text style={styles.status}>{dealsStatus}</Text> : null}
       </CollapsibleSection>
 
       <CollapsibleSection title="Static Map Tests">
@@ -672,7 +526,7 @@ const TestScreen: React.FC = () => {
               centerCoordinate={[-122.483696, 37.833818]}
             />
             {showGeoJSON && (
-              <MapboxGL.ShapeSource id="geojson" shape={geojsonExample}>
+              <MapboxGL.ShapeSource id="geojson" shape={sampleGeoJSON}>
                 <MapboxGL.FillLayer
                   id="fill"
                   style={{ fillColor: 'rgba(255,0,0,0.4)' }}
