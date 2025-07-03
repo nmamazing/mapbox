@@ -1,0 +1,93 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+android/app/build/
+android/build/
+android/.gradle/
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/app/release/
+android/app/debug/
+
+# Development files
+.expo/
+.expo-shared/
+*.log
+*.tsbuildinfo
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+__tests__/
+*.test.js
+*.test.ts
+*.test.tsx
+*.spec.js
+*.spec.ts
+*.spec.tsx
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Large assets that aren't needed for build
+assets/images/
+assets/videos/
+assets/audio/
+
+# Development tools
+.eslintrc*
+.prettierrc*
+jest.config.*
+
+# Git
+.git/
+.gitignore
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Large files that might be in the project
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# APK files (we're building these, not uploading them)
+*.apk
+*.aab
+
+# Review folder (contains demo projects)
+review this/
+
+# Debug files
+debug-deals.js
+extract-icons.js
+fix-svgs.js
+
+# Temporary backend
+temp_backend/ 

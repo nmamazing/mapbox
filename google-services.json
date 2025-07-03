@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "861269382814",
+    "project_id": "single-cab-459021-g1",
+    "storage_bucket": "single-cab-459021-g1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:861269382814:android:22f2d5e51957b1a0a00d8f",
+        "android_client_info": {
+          "package_name": "com.amazingacqagent.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPzojtoa-UAK3NbC1He8xKevxd6cNpBOo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

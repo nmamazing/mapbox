@@ -1,0 +1,7 @@
+version: "3"
+
+tunnels:
+  aaa-demo-api:
+    addr: 3000
+    proto: http
+    domain: aaa-demo-api.ngrok.io

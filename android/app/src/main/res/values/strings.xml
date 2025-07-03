@@ -1,0 +1,4 @@
+<resources>
+  <string name="app_name">AmazingAcqAgent</string>
+  <string name="expo_runtime_version">exposdk:53.0.0</string>
+</resources>
